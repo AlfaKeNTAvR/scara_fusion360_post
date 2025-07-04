@@ -6,9 +6,12 @@ extension = "xml";
 setCodePage("ascii");
 
 capabilities = CAPABILITY_MILLING | CAPABILITY_JET;
+
+allowedCircularPlanes = undefined; // Allow any circular motion.
+
 var cmdID = 0;
 var epsilon = 20.0;
-var BlendRadius = 10.0;
+var BlendRadius = 0.0;
 
 var glueEnabled = false;
 var maxSpeed = 0.5;
@@ -51,7 +54,7 @@ properties = {
 };
 
 function onOpen() {
-  writeln(
+    writeln(
 `<?xml version="1.0" encoding="UTF-8"?>
 <Cmds>
     <YiKingSoft>2.9.8(RU3)</YiKingSoft>
@@ -97,7 +100,7 @@ function onOpen() {
             <CmdSetType>ECST_Segment</CmdSetType>
             <CmdName>Subprogram</CmdName>
             <ShowName>Stop_Subprogram</ShowName>
-            <CmdId>0</CmdId>
+            <CmdId>` + (cmdID++) + `</CmdId>
             <SameTypeID>-1</SameTypeID>
         </Cmdinfo>
         <ChildCmd>
@@ -106,7 +109,7 @@ function onOpen() {
                     <CmdSetType>ECST_Logic</CmdSetType>
                     <CmdName>Call Subprogram</CmdName>
                     <ShowName>Call Initialize</ShowName>
-                    <CmdId>1</CmdId>
+                    <CmdId>` + (cmdID++) + `</CmdId>
                     <SameTypeID>-1</SameTypeID>
                     <Param0-IDSubprogram>Initialize Subprogram</Param0-IDSubprogram>
                 </Cmdinfo>
@@ -119,7 +122,7 @@ function onOpen() {
             <CmdSetType>ECST_Segment</CmdSetType>
             <CmdName>Subprogram</CmdName>
             <ShowName>Initialize Subprogram</ShowName>
-            <CmdId>2</CmdId>
+            <CmdId>` + (cmdID++) + `</CmdId>
             <SameTypeID>-1</SameTypeID>
         </Cmdinfo>
         <ChildCmd>
@@ -128,7 +131,7 @@ function onOpen() {
                     <CmdSetType>ECST_Segment</CmdSetType>
                     <CmdName>SetRobot</CmdName>
                     <ShowName>SetRobot</ShowName>
-                    <CmdId>3</CmdId>
+                    <CmdId>` + (cmdID++) + `</CmdId>
                     <SameTypeID>-1</SameTypeID>
                     <Param0-IDRobotNo>1</Param0-IDRobotNo>
                     <Param1-IDRobotType>ERT_Scara</Param1-IDRobotType>
@@ -140,7 +143,7 @@ function onOpen() {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Expression</CmdName>
                             <ShowName>enable_glue:=false</ShowName>
-                            <CmdId>4</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <PmExp0-IDExpression>enable_glue:=false </PmExp0-IDExpression>
                         </Cmdinfo>
@@ -150,7 +153,7 @@ function onOpen() {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Expression</CmdName>
                             <ShowName>enable_vacuum:=false</ShowName>
-                            <CmdId>5</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <PmExp0-IDExpression>enable_vacuum:=false </PmExp0-IDExpression>
                         </Cmdinfo>
@@ -160,7 +163,7 @@ function onOpen() {
                             <CmdSetType>ECST_Set</CmdSetType>
                             <CmdName>SetFixedSpeed</CmdName>
                             <ShowName>SetHomingSpeed</ShowName>
-                            <CmdId>7</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <Param0-IDFixedSpeed>true</Param0-IDFixedSpeed>
                             <Param1-IDSpeedRatio>0.1000</Param1-IDSpeedRatio>
@@ -171,7 +174,7 @@ function onOpen() {
                             <CmdSetType>ECST_Move</CmdSetType>
                             <CmdName>MoveDoor</CmdName>
                             <ShowName>MoveDoorHome</ShowName>
-                            <CmdId>8</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <Param0-IDTCP>0</Param0-IDTCP>
                             <Param1-IDBase>0</Param1-IDBase>
@@ -227,7 +230,7 @@ function onOpen() {
             <CmdSetType>ECST_Segment</CmdSetType>
             <CmdName>Main Program</CmdName>
             <ShowName>Main Program</ShowName>
-            <CmdId>10</CmdId>
+            <CmdId>` + (cmdID++) + `</CmdId>
             <SameTypeID>-1</SameTypeID>
         </Cmdinfo>
         <ChildCmd>
@@ -236,7 +239,7 @@ function onOpen() {
                     <CmdSetType>ECST_Logic</CmdSetType>
                     <CmdName>Call Subprogram</CmdName>
                     <ShowName>Call Initialize</ShowName>
-                    <CmdId>11</CmdId>
+                    <CmdId>` + (cmdID++) + `</CmdId>
                     <SameTypeID>-1</SameTypeID>
                     <Param0-IDSubprogram>Initialize Subprogram</Param0-IDSubprogram>
                 </Cmdinfo>
@@ -246,7 +249,7 @@ function onOpen() {
                     <CmdSetType>ECST_Segment</CmdSetType>
                     <CmdName>SetRobot</CmdName>
                     <ShowName>SetRobot</ShowName>
-                    <CmdId>12</CmdId>
+                    <CmdId>` + (cmdID++) + `</CmdId>
                     <SameTypeID>-1</SameTypeID>
                     <Param0-IDRobotNo>1</Param0-IDRobotNo>
                     <Param1-IDRobotType>ERT_Scara</Param1-IDRobotType>
@@ -258,17 +261,16 @@ function onOpen() {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Loop</CmdName>
                             <ShowName>Loop</ShowName>
-                            <CmdId>13</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>0</SameTypeID>
                             <PmExp0-IDTimes>true </PmExp0-IDTimes>
                         </Cmdinfo>
                         <ChildCmd>`
   );
-  cmdID = 14;
 }
 
 function onClose() {
-  writeln(
+    writeln(
 `                           <Cmd ItemText="Loop End"/>
                         </ChildCmd>
                     </Cmd>
@@ -283,7 +285,7 @@ function onClose() {
             <CmdSetType>ECST_Segment</CmdSetType>
             <CmdName>Thread</CmdName>
             <ShowName>Glue Control Thread</ShowName>
-            <CmdId>` + (cmdID + 1) + `</CmdId>
+            <CmdId>` + (cmdID++) + `</CmdId>
             <SameTypeID>-1</SameTypeID>
         </Cmdinfo>
         <ChildCmd>
@@ -292,7 +294,7 @@ function onClose() {
                     <CmdSetType>ECST_IO</CmdSetType>
                     <CmdName>SetOutput</CmdName>
                     <ShowName>SetGlueOutput</ShowName>
-                    <CmdId>` + (cmdID + 2) + `</CmdId>
+                    <CmdId>` + (cmdID++) + `</CmdId>
                     <SameTypeID>-1</SameTypeID>
                     <Param0-IDChannel>0</Param0-IDChannel>
                     <PmVar1-IDLevel>2</PmVar1-IDLevel>
@@ -306,7 +308,7 @@ function onClose() {
             <CmdSetType>ECST_Segment</CmdSetType>
             <CmdName>Thread</CmdName>
             <ShowName>Vacuum Table Control Thread</ShowName>
-            <CmdId>` + (cmdID + 3) + `</CmdId>
+            <CmdId>` + (cmdID++) + `</CmdId>
             <SameTypeID>-1</SameTypeID>
         </Cmdinfo>
         <ChildCmd>
@@ -315,7 +317,7 @@ function onClose() {
                     <CmdSetType>ECST_IO</CmdSetType>
                     <CmdName>SetOutput</CmdName>
                     <ShowName>SetVacuumTableOutput</ShowName>
-                    <CmdId>` + (cmdID + 4) + `</CmdId>
+                    <CmdId>` + (cmdID++) + `</CmdId>
                     <SameTypeID>-1</SameTypeID>
                     <Param0-IDChannel>1</Param0-IDChannel>
                     <PmVar1-IDLevel>0</PmVar1-IDLevel>
@@ -329,7 +331,7 @@ function onClose() {
             <CmdSetType>ECST_Segment</CmdSetType>
             <CmdName>Thread</CmdName>
             <ShowName>Speed Control Thread</ShowName>
-            <CmdId>` + (cmdID + 5) + `</CmdId>
+            <CmdId>` + (cmdID++) + `</CmdId>
             <SameTypeID>-1</SameTypeID>
         </Cmdinfo>
         <ChildCmd>
@@ -338,7 +340,7 @@ function onClose() {
                     <CmdSetType>ECST_Set</CmdSetType>
                     <CmdName>SetFixedSpeed</CmdName>
                     <ShowName>SetOperationSpeed</ShowName>
-                    <CmdId>` + (cmdID + 6) + `</CmdId>
+                    <CmdId>` + (cmdID++) + `</CmdId>
                     <SameTypeID>-1</SameTypeID>
                     <Param0-IDFixedSpeed>true</Param0-IDFixedSpeed>
                     <PmVar1-IDSpeedRatio>1</PmVar1-IDSpeedRatio>
@@ -347,7 +349,8 @@ function onClose() {
             <Cmd ItemText="Thread End"/>
         </ChildCmd>
     </Cmd>
-</Cmds>`);
+</Cmds>`
+    );
 }
 
 function onParameter(name, value) {
@@ -369,12 +372,12 @@ function onParameter(name, value) {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Expression</CmdName>
                             <ShowName>enable_vacuum:=true</ShowName>
-                            <CmdId>` + (cmdID) + `</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <PmExp0-IDExpression>enable_vacuum:=true </PmExp0-IDExpression>
                         </Cmdinfo>
-                    </Cmd>`);
-                cmdID += 1;
+                    </Cmd>`
+                );
 
           } else if (sText2[1] == "OFF") {
                 writeln(
@@ -383,13 +386,12 @@ function onParameter(name, value) {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Expression</CmdName>
                             <ShowName>enable_vacuum:=false</ShowName>
-                            <CmdId>` + (cmdID) + `</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <PmExp0-IDExpression>enable_vacuum:=false </PmExp0-IDExpression>
                         </Cmdinfo>
-                    </Cmd>`);
-                cmdID += 1;
-                cmdID += 1;
+                    </Cmd>`
+                );
             }
             
             break;
@@ -401,12 +403,12 @@ function onParameter(name, value) {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Pause</CmdName>
                             <ShowName>Pause</ShowName>
-                            <CmdId>` + (cmdID) + `</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <Param0-IDPauseMode>0</Param0-IDPauseMode>
                         </Cmdinfo>
-                    </Cmd>`);
-            cmdID += 1;
+                    </Cmd>`
+            );
 
             break;
 
@@ -417,14 +419,14 @@ function onParameter(name, value) {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Wait</CmdName>
                             <ShowName>Wait</ShowName>
-                            <CmdId>` + (cmdID) + `</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <Param0-IDModeSet>0</Param0-IDModeSet>
                             <Param1-IDTimeMode>` + (parseFloat(sText2[1])) + `</Param1-IDTimeMode>
                             <Param2-IDExpressionMode>true</Param2-IDExpressionMode>
                         </Cmdinfo>
-                    </Cmd>`);
-            cmdID += 1;
+                    </Cmd>`
+            );
 
             break;
 
@@ -435,18 +437,18 @@ function onParameter(name, value) {
 
             if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
                 writeln(
-`                   <Cmd ItemText="robot_speed:=` + rapidMotionSpeed + `">
-                    <Cmdinfo>
-                        <CmdSetType>ECST_Logic</CmdSetType>
-                        <CmdName>Expression</CmdName>
-                        <ShowName>robot_speed:=` + rapidMotionSpeed + `</ShowName>
-                        <CmdId>` + (cmdID) + `</CmdId>
-                        <SameTypeID>-1</SameTypeID>
-                        <PmExp0-IDExpression>robot_speed:=` + rapidMotionSpeed + `</PmExp0-IDExpression>
-                    </Cmdinfo>
-                </Cmd>`);
+    `               <Cmd ItemText="robot_speed:=` + rapidMotionSpeed + `">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>robot_speed:=` + rapidMotionSpeed + `</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>robot_speed:=` + rapidMotionSpeed + `</PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+                );
                 lastSpeed = rapidMotionSpeed;
-                cmdID += 1;
             }
 
             writeln(
@@ -455,7 +457,7 @@ function onParameter(name, value) {
                             <CmdSetType>ECST_Move</CmdSetType>
                             <CmdName>MoveL</CmdName>
                             <ShowName>MoveL</ShowName>
-                            <CmdId>` + (cmdID) + `</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <Param1-IDVelocity>1.0</Param1-IDVelocity>
                             <Param2-IDAcc>1.0</Param2-IDAcc>
@@ -470,7 +472,7 @@ function onParameter(name, value) {
                                     <CmdSetType>ECST_Move</CmdSetType>
                                     <CmdName>PathPoint</CmdName>
                                     <ShowName>PathPoint</ShowName>
-                                    <CmdId>` + (cmdID + 1) + `</CmdId>
+                                    <CmdId>` + (cmdID++) + `</CmdId>
                                     <SameTypeID>-1</SameTypeID>
                                     <Param0-IDTCP>0</Param0-IDTCP>
                                     <Param1-IDBase>0</Param1-IDBase>
@@ -506,8 +508,8 @@ function onParameter(name, value) {
                             </Cmd>
                             <Cmd ItemText="MoveL End"/>
                         </ChildCmd>
-                    </Cmd>`);
-            cmdID += 2;
+                    </Cmd>`
+            );
 
             break;
         }
@@ -524,94 +526,95 @@ function onRapid(__x, __y, __z) {
     if (glueEnabled == true) {
         writeln(
 `                   <Cmd ItemText="enable_glue:=false">
-                    <Cmdinfo>
-                        <CmdSetType>ECST_Logic</CmdSetType>
-                        <CmdName>Expression</CmdName>
-                        <ShowName>enable_glue:=false</ShowName>
-                        <CmdId>` + (cmdID) + `</CmdId>
-                        <SameTypeID>-1</SameTypeID>
-                        <PmExp0-IDExpression>enable_glue:=false</PmExp0-IDExpression>
-                    </Cmdinfo>
-                </Cmd>`);
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>enable_glue:=false</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>enable_glue:=false</PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+        );
         glueEnabled = false;
-        cmdID += 1;
     }
 
     if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
         writeln(
 `                   <Cmd ItemText="robot_speed:=` + rapidMotionSpeed + `">
-                    <Cmdinfo>
-                        <CmdSetType>ECST_Logic</CmdSetType>
-                        <CmdName>Expression</CmdName>
-                        <ShowName>robot_speed:=` + rapidMotionSpeed + `</ShowName>
-                        <CmdId>` + (cmdID) + `</CmdId>
-                        <SameTypeID>-1</SameTypeID>
-                        <PmExp0-IDExpression>robot_speed:=` + rapidMotionSpeed + `</PmExp0-IDExpression>
-                    </Cmdinfo>
-                </Cmd>`);
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>robot_speed:=` + rapidMotionSpeed + `</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>robot_speed:=` + rapidMotionSpeed + `</PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+        );
         lastSpeed = rapidMotionSpeed;
-        cmdID += 1;
     }
 
     writeln(
-`                    <Cmd ItemText="MoveL">
-                          <Cmdinfo>
-                              <CmdSetType>ECST_Move</CmdSetType>
-                              <CmdName>MoveL</CmdName>
-                              <ShowName>MoveL</ShowName>
-                              <CmdId>` + (cmdID) + `</CmdId>
-                              <SameTypeID>-1</SameTypeID>
-                              <Param1-IDVelocity>1.0</Param1-IDVelocity>
-                              <Param2-IDAcc>1.0</Param2-IDAcc>
-                              <Param3-IDJerk>1.0</Param3-IDJerk>
-                              <Param4-IDRotVelocity>1.0</Param4-IDRotVelocity>
-                              <Param5-IDRotAcc>1.0</Param5-IDRotAcc>
-                              <Param6-IDRotJerk>1.0</Param6-IDRotJerk>
-                          </Cmdinfo>
-                          <ChildCmd>
-                              <Cmd ItemText="PathPoint">
-                                  <Cmdinfo>
-                                      <CmdSetType>ECST_Move</CmdSetType>
-                                      <CmdName>PathPoint</CmdName>
-                                      <ShowName>PathPoint</ShowName>
-                                      <CmdId>` + (cmdID + 1) + `</CmdId>
-                                      <SameTypeID>-1</SameTypeID>
-                                      <Param0-IDTCP>0</Param0-IDTCP>
-                                      <Param1-IDBase>0</Param1-IDBase>
-                                      <Param2-IDUseCustom>false</Param2-IDUseCustom>
-                                      <Param3-IDVelocity>1.0</Param3-IDVelocity>
-                                      <Param4-IDAcc>1.0</Param4-IDAcc>
-                                      <Param5-IDJerk>1.0</Param5-IDJerk>
-                                      <Param6-IDRotVelocity>1.0</Param6-IDRotVelocity>
-                                      <Param7-IDRotAcc>1.0</Param7-IDRotAcc>
-                                      <Param8-IDRotJerk>1.0</Param8-IDRotJerk>
-                                      <Param10-IDBlendSet>0</Param10-IDBlendSet>
-                                      <Param11-IDRadius>0</Param11-IDRadius>
-                                      <Param12-IDTimeScale>0</Param12-IDTimeScale>
-                                      <Param15-IDModeset>0</Param15-IDModeset>
-                                      <Param16-IDUseVel>1.05</Param16-IDUseVel>
-                                      <Param17-IDTime>1</Param17-IDTime>
-                                      <Param100-IDTabPointSet>''</Param100-IDTabPointSet>
-                                      <Param101-IDPointset>1</Param101-IDPointset>
-                                      <Param102-IDPointId>0</Param102-IDPointId>
-                                      <Param103-IDPoint>-1</Param103-IDPoint>
-                                      <Param104-IDX>` + (x) + `</Param104-IDX>
-                                      <Param105-IDY>` + (y) + `</Param105-IDY>
-                                      <Param106-IDZ>` + (z) + `</Param106-IDZ>
-                                      <Param109-IDRZ>0</Param109-IDRZ>
-                                      <Param110-IDE1>0</Param110-IDE1>
-                                      <Param111-IDE2>0</Param111-IDE2>
-                                      <Param112-IDE3>0</Param112-IDE3>
-                                      <Param113-IDE4>0</Param113-IDE4>
-                                      <Param114-IDE5>0</Param114-IDE5>
-                                      <Param115-IDE6>0</Param115-IDE6>
-                                      <Param128-IDDifferPose>2</Param128-IDDifferPose>
-                                  </Cmdinfo>
-                              </Cmd>
-                              <Cmd ItemText="MoveL End"/>
-                          </ChildCmd>
-                      </Cmd>`);
-    cmdID += 2;
+`                   <Cmd ItemText="MoveL">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Move</CmdSetType>
+                            <CmdName>MoveL</CmdName>
+                            <ShowName>MoveL</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <Param1-IDVelocity>1.0</Param1-IDVelocity>
+                            <Param2-IDAcc>1.0</Param2-IDAcc>
+                            <Param3-IDJerk>1.0</Param3-IDJerk>
+                            <Param4-IDRotVelocity>1.0</Param4-IDRotVelocity>
+                            <Param5-IDRotAcc>1.0</Param5-IDRotAcc>
+                            <Param6-IDRotJerk>1.0</Param6-IDRotJerk>
+                        </Cmdinfo>
+                        <ChildCmd>
+                            <Cmd ItemText="PathPoint">
+                                <Cmdinfo>
+                                    <CmdSetType>ECST_Move</CmdSetType>
+                                    <CmdName>PathPoint</CmdName>
+                                    <ShowName>PathPoint</ShowName>
+                                    <CmdId>` + (cmdID++) + `</CmdId>
+                                    <SameTypeID>-1</SameTypeID>
+                                    <Param0-IDTCP>0</Param0-IDTCP>
+                                    <Param1-IDBase>0</Param1-IDBase>
+                                    <Param2-IDUseCustom>false</Param2-IDUseCustom>
+                                    <Param3-IDVelocity>1.0</Param3-IDVelocity>
+                                    <Param4-IDAcc>1.0</Param4-IDAcc>
+                                    <Param5-IDJerk>1.0</Param5-IDJerk>
+                                    <Param6-IDRotVelocity>1.0</Param6-IDRotVelocity>
+                                    <Param7-IDRotAcc>1.0</Param7-IDRotAcc>
+                                    <Param8-IDRotJerk>1.0</Param8-IDRotJerk>
+                                    <Param10-IDBlendSet>0</Param10-IDBlendSet>
+                                    <Param11-IDRadius>0</Param11-IDRadius>
+                                    <Param12-IDTimeScale>0</Param12-IDTimeScale>
+                                    <Param15-IDModeset>0</Param15-IDModeset>
+                                    <Param16-IDUseVel>1.05</Param16-IDUseVel>
+                                    <Param17-IDTime>1</Param17-IDTime>
+                                    <Param100-IDTabPointSet>''</Param100-IDTabPointSet>
+                                    <Param101-IDPointset>1</Param101-IDPointset>
+                                    <Param102-IDPointId>0</Param102-IDPointId>
+                                    <Param103-IDPoint>-1</Param103-IDPoint>
+                                    <Param104-IDX>` + (x) + `</Param104-IDX>
+                                    <Param105-IDY>` + (y) + `</Param105-IDY>
+                                    <Param106-IDZ>` + (z) + `</Param106-IDZ>
+                                    <Param109-IDRZ>0</Param109-IDRZ>
+                                    <Param110-IDE1>0</Param110-IDE1>
+                                    <Param111-IDE2>0</Param111-IDE2>
+                                    <Param112-IDE3>0</Param112-IDE3>
+                                    <Param113-IDE4>0</Param113-IDE4>
+                                    <Param114-IDE5>0</Param114-IDE5>
+                                    <Param115-IDE6>0</Param115-IDE6>
+                                    <Param128-IDDifferPose>2</Param128-IDDifferPose>
+                                </Cmdinfo>
+                            </Cmd>
+                            <Cmd ItemText="MoveL End"/>
+                        </ChildCmd>
+                    </Cmd>`
+    );
+
 }
 
 function onLinear(__x, __y, __z, __feed) {
@@ -634,38 +637,38 @@ function onLinear(__x, __y, __z, __feed) {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Expression</CmdName>
                             <ShowName>enable_glue:=true</ShowName>
-                            <CmdId>` + (cmdID) + `</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <PmExp0-IDExpression>enable_glue:=true </PmExp0-IDExpression>
                         </Cmdinfo>
-                    </Cmd>`);
+                    </Cmd>`
+        );
         glueEnabled = true;
-        cmdID += 1;
     }
 
     if (Math.abs(lastSpeed - feed) > 0.01) {    
         writeln(
 `                   <Cmd ItemText="robot_speed:=` + feed + `">
-                    <Cmdinfo>
-                        <CmdSetType>ECST_Logic</CmdSetType>
-                        <CmdName>Expression</CmdName>
-                        <ShowName>robot_speed:=` + feed + `</ShowName>
-                        <CmdId>` + (cmdID) + `</CmdId>
-                        <SameTypeID>-1</SameTypeID>
-                        <PmExp0-IDExpression>robot_speed:=` + feed + `</PmExp0-IDExpression>
-                    </Cmdinfo>
-                </Cmd>`);
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>robot_speed:=` + feed + `</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>robot_speed:=` + feed + `</PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+        );
         lastSpeed = feed;
-        cmdID += 1;
     }
 
     writeln(
-`                    <Cmd ItemText="MoveL">
+`                   <Cmd ItemText="MoveL">
                         <Cmdinfo>
                             <CmdSetType>ECST_Move</CmdSetType>
                             <CmdName>MoveL</CmdName>
                             <ShowName>MoveL</ShowName>
-                            <CmdId>` + (cmdID) + `</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <Param1-IDVelocity>1.0</Param1-IDVelocity>
                             <Param2-IDAcc>1.0</Param2-IDAcc>
@@ -680,7 +683,7 @@ function onLinear(__x, __y, __z, __feed) {
                                     <CmdSetType>ECST_Move</CmdSetType>
                                     <CmdName>PathPoint</CmdName>
                                     <ShowName>PathPoint</ShowName>
-                                    <CmdId>` + (cmdID + 1) + `</CmdId>
+                                    <CmdId>` + (cmdID++) + `</CmdId>
                                     <SameTypeID>-1</SameTypeID>
                                     <Param0-IDTCP>0</Param0-IDTCP>
                                     <Param1-IDBase>0</Param1-IDBase>
@@ -716,11 +719,145 @@ function onLinear(__x, __y, __z, __feed) {
                             </Cmd>
                             <Cmd ItemText="MoveL End"/>
                         </ChildCmd>
-                    </Cmd>`);
-  cmdID += 2;
+                    </Cmd>`
+    );
+    
 }
 
-function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z) {
+function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z, __feed) {
+    const zOffset = getProperty("zTableOffset");
+    const center = {x: parseFloat(xyzFormat.format(___cx)), y: parseFloat(xyzFormat.format(__cy)), z: parseFloat(xyzFormat.format(__cz)) + zOffset};
+    const p2 = { x: parseFloat(xyzFormat.format(__x)), y: parseFloat(xyzFormat.format(__y)), z: parseFloat(xyzFormat.format(__z)) + zOffset };
+    const feed = parseFloat(feedFormat.format(__feed));
+
+    lastMoveType = "circular";
+    lastPosition = { x: p2.x, y: p2.y, z: p2.z };
+
+
+    // writeln(getCircularRadius() + " " + isFullCircle() + " " + getCircularSweep());
+
+    const start = getCurrentPosition();
+    const p0 = { x: parseFloat(xyzFormat.format(start.x)), y: parseFloat(xyzFormat.format(start.y)), z: parseFloat(xyzFormat.format(start.z)) + zOffset};
+    let p1 = { x: 0, y: 0, z: 0 };
+
+    const radius = Math.sqrt((p0.x - center.x) ** 2 + (p0.y - center.y) ** 2);
+
+    if (!isFullCircle()) {
+        // Calculate the mid-point of the circular arc:
+        // 1. Convert start and end points to vectors relative to the arc
+        //    center.
+        const v0 = { x: p0.x - center.x, y: p0.y - center.y };
+        const v2 = { x: p2.x - center.x, y: p2.y - center.y };
+
+        // 2. Compute angles (angle0 and angle2) from the center to each point
+        //    using atan2.
+        const angle0 = Math.atan2(v0.y, v0.x);
+        const angle2 = Math.atan2(v2.y, v2.x);
+
+        // 3. Determine the sweep angle (difference between angle2 and angle0),
+        //    adjusted for direction.
+        let sweep = angle2 - angle0;
+        if (__clockwise && sweep > 0) sweep -= 2 * Math.PI;
+        if (!__clockwise && sweep < 0) sweep += 2 * Math.PI;
+
+        // 4. Compute the mid-angle as halfway between angle0 and angle2.
+        const midAngle = angle0 + sweep / 2;
+
+        // 5. Use polar-to-Cartesian conversion (cos/sin) with the radius and
+        //    mid-angle to get the XY midpoint. Set Z as the average of start
+        //    and end Z values.
+        p1 = { x: xyzFormat.format(center.x + radius * Math.cos(midAngle)), y: xyzFormat.format(center.y + radius * Math.sin(midAngle)), z: xyzFormat.format((p0.z + p2.z) / 2 )};
+    }
+
+    // TODO: Handle full circle case.
+
+    if (glueEnabled == false) {
+        writeln(
+`                   <Cmd ItemText="enable_glue:=true">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>enable_glue:=true</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>enable_glue:=true </PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+        );
+        glueEnabled = true;
+    }
+
+    if (Math.abs(lastSpeed - feed) > 0.01) {    
+        writeln(
+`                   <Cmd ItemText="robot_speed:=` + feed + `">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>robot_speed:=` + feed + `</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>robot_speed:=` + feed + `</PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+        );
+        lastSpeed = feed;
+    }
+
+    writeln(
+ `                  <Cmd ItemText="MoveC">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Move</CmdSetType>
+                            <CmdName>MoveC</CmdName>
+                            <ShowName>MoveC</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <Param0-IDTCP>0</Param0-IDTCP>
+                            <Param1-IDBase>0</Param1-IDBase>
+                            <Param3-IDVelocity>1</Param3-IDVelocity>
+                            <Param4-IDAcc>1</Param4-IDAcc>
+                            <Param5-IDJerk>1</Param5-IDJerk>
+                            <Param6-IDRotVelocity>1</Param6-IDRotVelocity>
+                            <Param7-IDRotAcc>1</Param7-IDRotAcc>
+                            <Param8-IDRotJerk>1</Param8-IDRotJerk>
+                            <Param9-IDBlendSet>0</Param9-IDBlendSet>
+                            <Param10-IDRadius>0</Param10-IDRadius>
+                            <Param11-IDTimeScale>0</Param11-IDTimeScale>
+                            <Param13-IDDifferPose>2</Param13-IDDifferPose>
+                            <Param14-IDModeset>0</Param14-IDModeset>
+                            <Param15-IDUseVel>0.25</Param15-IDUseVel>
+                            <Param16-IDTime>1</Param16-IDTime>
+                            <Param18-TabPointSet1>''</Param18-TabPointSet1>
+                            <Param19-IDPointset>1</Param19-IDPointset>
+                            <Param20-IDPointId>0</Param20-IDPointId>
+                            <Param21-IDPoint>-1</Param21-IDPoint>
+                            <Param22-IDX>`+ (p1.x) +`</Param22-IDX>
+                            <Param23-IDy>`+ (p1.y) +`</Param23-IDy>
+                            <Param24-IDZ>`+ (p1.z) +`</Param24-IDZ>
+                            <Param27-IDRZ>0</Param27-IDRZ>
+                            <Param28-IDE1>0</Param28-IDE1>
+                            <Param29-IDE2>0</Param29-IDE2>
+                            <Param30-IDE3>0</Param30-IDE3>
+                            <Param31-IDE4>0</Param31-IDE4>
+                            <Param32-IDE5>0</Param32-IDE5>
+                            <Param33-IDE6>0</Param33-IDE6>
+                            <Param49-TabPointSet2>''</Param49-TabPointSet2>
+                            <Param50-IDPointset2>1</Param50-IDPointset2>
+                            <Param51-IDPointId2>0</Param51-IDPointId2>
+                            <Param52-IDPoint2>-1</Param52-IDPoint2>
+                            <Param53-IDX2>`+ (p2.x) +`</Param53-IDX2>
+                            <Param54-IDY2>`+ (p2.y) +`</Param54-IDY2>
+                            <Param55-IDZ2>`+ (p2.z) +`</Param55-IDZ2>
+                            <Param58-IDRZ2>0</Param58-IDRZ2>
+                            <Param59-IDE21>0</Param59-IDE21>
+                            <Param60-IDE22>0</Param60-IDE22>
+                            <Param61-IDE23>0</Param61-IDE23>
+                            <Param62-IDE24>0</Param62-IDE24>
+                            <Param63-IDE25>0</Param63-IDE25>
+                            <Param64-IDE26>0</Param64-IDE26>
+                        </Cmdinfo>
+                    </Cmd>`
+    ); 
+    cmdID += 1;
 }
 
 function onSection() {
@@ -734,11 +871,12 @@ function onSection() {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Label</CmdName>
                             <ShowName>`+ `; Start: ` + comment +`</ShowName>
-                            <CmdId>`+ cmdID +`</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                         </Cmdinfo>
-                    </Cmd>`);
-            cmdID += 1;
+                    </Cmd>`
+            );
+            
         }  
     }     
 }
@@ -754,11 +892,12 @@ function onSectionEnd() {
                             <CmdSetType>ECST_Logic</CmdSetType>
                             <CmdName>Label</CmdName>
                             <ShowName>`+ `; End: ` + comment +`</ShowName>
-                            <CmdId>`+ cmdID +`</CmdId>
+                            <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                         </Cmdinfo>
-                    </Cmd>`);
-            cmdID += 1;
+                    </Cmd>`
+            );
+            
         }  
     }     
 }
