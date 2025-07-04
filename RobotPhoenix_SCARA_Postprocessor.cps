@@ -9,10 +9,46 @@ capabilities = CAPABILITY_MILLING | CAPABILITY_JET;
 var cmdID = 0;
 var epsilon = 20.0;
 var BlendRadius = 10.0;
-var xyzFormat = createFormat({decimals: 2, trim: true});
-var lastPosition = { x: 0, y: 0, z: 0 };
-var zOffset = -95;
+
 var glueEnabled = false;
+var maxSpeed = 0.5;
+
+var lastPosition = { x: 0, y: 0, z: 0 };
+var lastSpeed = 0.1; // Initialize with homing speed.
+
+var xyzFormat = createFormat({decimals: 2, trim: true});
+var feedFormat = createFormat({decimals: 2, trim: true});
+
+// User-defined properties:
+properties = {
+    zTableOffset: {
+        title: "Z Table Offset (mm)",
+        // description: "Negative distance to the table surface in mm.",
+        group: "1 - General",
+        type: "number",
+        value: -95,
+        range: [-180, 0],
+        scope: "post",
+    },
+    rapidMotionSpeed: {
+        title: "Rapid Motion Speed (fraction)",
+        // description: "The robot speed fraction for fast movement without glue application.",
+        group: "1 - General",
+        type: "number",
+        value: 0.3,
+        range: [0.01, maxSpeed],
+        scope: "post",
+    },
+    // blendingRadius: {
+    //     title: "Blending Radius (mm)",
+    //     // description: "The robot speed fraction for fast movement without glue application.",
+    //     group: "2 - Advanced",
+    //     type: "number",
+    //     value: 10,
+    //     // range: [0, maxVelocityFraction],
+    //     scope: "post",
+    // },
+};
 
 function onOpen() {
   writeln(
@@ -34,7 +70,7 @@ function onOpen() {
         <Var>
             <VarID>1</VarID>
             <strVartype>double</strVartype>
-            <VarName>max_speed</VarName>
+            <VarName>robot_speed</VarName>
             <SVarValue>0.1000</SVarValue>
             <bInitMaxAndMin>true</bInitMaxAndMin>
             <MaxValue>0.5000</MaxValue>
@@ -119,16 +155,6 @@ function onOpen() {
                             <PmExp0-IDExpression>enable_vacuum:=false </PmExp0-IDExpression>
                         </Cmdinfo>
                     </Cmd>
-                    <Cmd ItemText="max_speed:=0.2">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>max_speed:=0.2</ShowName>
-                            <CmdId>6</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>max_speed:=0.2 </PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>
                     <Cmd ItemText="SetHomingSpeed">
                         <Cmdinfo>
                             <CmdSetType>ECST_Set</CmdSetType>
@@ -188,17 +214,6 @@ function onOpen() {
                             <Param162-IDUpBlendR>1</Param162-IDUpBlendR>
                             <Param163-IDDownBlendR>1</Param163-IDDownBlendR>
                             <Param164-IDRotPercent>0.8</Param164-IDRotPercent>
-                        </Cmdinfo>
-                    </Cmd>
-                    <Cmd ItemText="SetOperationSpeed">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Set</CmdSetType>
-                            <CmdName>SetFixedSpeed</CmdName>
-                            <ShowName>SetOperationSpeed</ShowName>
-                            <CmdId>9</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <Param0-IDFixedSpeed>true</Param0-IDFixedSpeed>
-                            <PmVar1-IDSpeedRatio>1</PmVar1-IDSpeedRatio>
                         </Cmdinfo>
                     </Cmd>
                     <Cmd ItemText="SetRobot End"/>
@@ -309,10 +324,35 @@ function onClose() {
             <Cmd ItemText="Thread End"/>
         </ChildCmd>
     </Cmd>
+    <Cmd ItemText="Speed Control Thread">
+        <Cmdinfo>
+            <CmdSetType>ECST_Segment</CmdSetType>
+            <CmdName>Thread</CmdName>
+            <ShowName>Speed Control Thread</ShowName>
+            <CmdId>` + (cmdID + 5) + `</CmdId>
+            <SameTypeID>-1</SameTypeID>
+        </Cmdinfo>
+        <ChildCmd>
+            <Cmd ItemText="SetOperationSpeed">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Set</CmdSetType>
+                    <CmdName>SetFixedSpeed</CmdName>
+                    <ShowName>SetOperationSpeed</ShowName>
+                    <CmdId>` + (cmdID + 6) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <Param0-IDFixedSpeed>true</Param0-IDFixedSpeed>
+                    <PmVar1-IDSpeedRatio>1</PmVar1-IDSpeedRatio>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="Thread End"/>
+        </ChildCmd>
+    </Cmd>
 </Cmds>`);
 }
 
 function onParameter(name, value) {
+    var zOffset = getProperty("zTableOffset");
+    var rapidMotionSpeed = getProperty("rapidMotionSpeed");
 
     switch (name) {
         case "action":
@@ -392,6 +432,23 @@ function onParameter(name, value) {
             x = parseFloat(sText2[1]);
             y = parseFloat(sText2[2]);
             z = parseFloat(sText2[3]) + zOffset;
+
+            if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
+                writeln(
+`                   <Cmd ItemText="robot_speed:=` + rapidMotionSpeed + `">
+                    <Cmdinfo>
+                        <CmdSetType>ECST_Logic</CmdSetType>
+                        <CmdName>Expression</CmdName>
+                        <ShowName>robot_speed:=` + rapidMotionSpeed + `</ShowName>
+                        <CmdId>` + (cmdID) + `</CmdId>
+                        <SameTypeID>-1</SameTypeID>
+                        <PmExp0-IDExpression>robot_speed:=` + rapidMotionSpeed + `</PmExp0-IDExpression>
+                    </Cmdinfo>
+                </Cmd>`);
+                lastSpeed = rapidMotionSpeed;
+                cmdID += 1;
+            }
+
             writeln(
 `                    <Cmd ItemText="MoveL">
                         <Cmdinfo>
@@ -458,7 +515,8 @@ function onParameter(name, value) {
 }
 
 function onRapid(__x, __y, __z) {
-    // var currentPos = getCurrentPosition();
+    var zOffset = getProperty("zTableOffset");
+    var rapidMotionSpeed = getProperty("rapidMotionSpeed");
     var x = parseFloat(xyzFormat.format(__x));
     var y = parseFloat(xyzFormat.format(__y));
     var z = parseFloat(xyzFormat.format(__z)) + zOffset;
@@ -472,10 +530,26 @@ function onRapid(__x, __y, __z) {
                         <ShowName>enable_glue:=false</ShowName>
                         <CmdId>` + (cmdID) + `</CmdId>
                         <SameTypeID>-1</SameTypeID>
-                        <PmExp0-IDExpression>enable_glue:=false </PmExp0-IDExpression>
+                        <PmExp0-IDExpression>enable_glue:=false</PmExp0-IDExpression>
                     </Cmdinfo>
                 </Cmd>`);
         glueEnabled = false;
+        cmdID += 1;
+    }
+
+    if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
+        writeln(
+`                   <Cmd ItemText="robot_speed:=` + rapidMotionSpeed + `">
+                    <Cmdinfo>
+                        <CmdSetType>ECST_Logic</CmdSetType>
+                        <CmdName>Expression</CmdName>
+                        <ShowName>robot_speed:=` + rapidMotionSpeed + `</ShowName>
+                        <CmdId>` + (cmdID) + `</CmdId>
+                        <SameTypeID>-1</SameTypeID>
+                        <PmExp0-IDExpression>robot_speed:=` + rapidMotionSpeed + `</PmExp0-IDExpression>
+                    </Cmdinfo>
+                </Cmd>`);
+        lastSpeed = rapidMotionSpeed;
         cmdID += 1;
     }
 
@@ -540,11 +614,12 @@ function onRapid(__x, __y, __z) {
     cmdID += 2;
 }
 
-function onLinear(__x, __y, __z) {
-    // var currentPos = getCurrentPosition();
+function onLinear(__x, __y, __z, __feed) {
+    var zOffset = getProperty("zTableOffset");
     var x = parseFloat(xyzFormat.format(__x));
     var y = parseFloat(xyzFormat.format(__y));
     var z = parseFloat(xyzFormat.format(__z)) + zOffset;
+    var feed = parseFloat(feedFormat.format(__feed));
 
     if (Math.abs(x - lastPosition.x) < epsilon && Math.abs(y - lastPosition.y) < epsilon && Math.abs(z - lastPosition.z) < epsilon) {
       return;
@@ -565,6 +640,22 @@ function onLinear(__x, __y, __z) {
                         </Cmdinfo>
                     </Cmd>`);
         glueEnabled = true;
+        cmdID += 1;
+    }
+
+    if (Math.abs(lastSpeed - feed) > 0.01) {    
+        writeln(
+`                   <Cmd ItemText="robot_speed:=` + feed + `">
+                    <Cmdinfo>
+                        <CmdSetType>ECST_Logic</CmdSetType>
+                        <CmdName>Expression</CmdName>
+                        <ShowName>robot_speed:=` + feed + `</ShowName>
+                        <CmdId>` + (cmdID) + `</CmdId>
+                        <SameTypeID>-1</SameTypeID>
+                        <PmExp0-IDExpression>robot_speed:=` + feed + `</PmExp0-IDExpression>
+                    </Cmdinfo>
+                </Cmd>`);
+        lastSpeed = feed;
         cmdID += 1;
     }
 
