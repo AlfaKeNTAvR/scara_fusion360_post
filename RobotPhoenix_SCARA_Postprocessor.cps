@@ -21,6 +21,8 @@ let lastSpeed = 0.1; // Initialize with homing speed.
 let xyzFormat = createFormat({decimals: 2, trim: true});
 let feedFormat = createFormat({decimals: 2, trim: true});
 
+let programDraft = []; // Store commands to write later.
+
 // User-defined properties:
 properties = {
     zTableOffset: {
@@ -269,6 +271,53 @@ function onOpen() {
 }
 
 function onClose() {
+
+    for (var i = 0; i < programDraft.length; i++) {
+        // writeln(programDraft[i].function + "(" + programDraft[i].arguments[0] + ")");
+        switch (programDraft[i].function) {
+            case "writeComment":
+                writeComment(programDraft[i].arguments[0]);
+
+                break;
+
+            case "writeGlue":
+                writeGlue(programDraft[i].arguments[0]);
+                
+                break;
+
+            case "writeSpeed":
+                writeSpeed(programDraft[i].arguments[0]);
+                
+                break;
+
+            case "writeVacuum":
+                writeVacuum(programDraft[i].arguments[0]);
+                
+                break;
+
+            case "writePause":
+                writePause();
+                
+                break;
+
+            case "writeDelay": 
+                writeDelay(programDraft[i].arguments[0]);
+            
+                break;
+
+            case "writeMoveL":
+                writeMoveL(programDraft[i].arguments[0]);
+                
+                break;
+
+            case "writeMoveC":
+                writeMoveC(programDraft[i].arguments[0], 
+                           programDraft[i].arguments[1]);
+    
+                break;
+        }
+    }
+
     writeln(
 `                           <Cmd ItemText="Loop End"/>
                         </ChildCmd>
@@ -362,28 +411,33 @@ function onParameter(name, value) {
         switch (sText2[0]) {
             case "VACUUM":
             if (sText2[1] == "ON") {
-                writeVacuum(true);
+                // writeVacuum(true);
+                programDraft.push({function: "writeVacuum", arguments: [true]});
             } 
 
             else if (sText2[1] == "OFF") {
-                writeVacuum(false);
+                // writeVacuum(false);
+                programDraft.push({function: "writeVacuum", arguments: [false]});
             }
             
             break;
 
         case "PAUSE":
-            writePause();
+            // writePause();
+            programDraft.push({function: "writePause", arguments: []});
             break;
 
         case "DELAY":
             const delayTime = parseFloat(sText2[1]);
-            writeDelay(delayTime);
+            // writeDelay(delayTime);
+            programDraft.push({function: "writeDelay", arguments: [delayTime]});
             break;
 
         case "MOVE":
             const rapidMotionSpeed = getProperty("rapidMotionSpeed");
             if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
-                writeSpeed(rapidMotionSpeed);
+                // writeSpeed(rapidMotionSpeed);
+                programDraft.push({function: "writeSpeed", arguments: [rapidMotionSpeed]});
                 lastSpeed = rapidMotionSpeed;
             }
 
@@ -391,7 +445,8 @@ function onParameter(name, value) {
             const p1 = {x: xyzFormat.format(parseFloat(sText2[1])), 
                         y: xyzFormat.format(parseFloat(sText2[2])), 
                         z: xyzFormat.format(parseFloat(sText2[3])) + zOffset};
-            writeMoveL(p1);
+            // writeMoveL(p1);
+            programDraft.push({function: "writeMoveL", arguments: [p1]});
             break;
         }
     }
@@ -399,13 +454,15 @@ function onParameter(name, value) {
 
 function onRapid(__x, __y, __z) {
     if (glueEnabled == true) {
-        writeGlue(false);
+        // writeGlue(false);
+        programDraft.push({function: "writeGlue", arguments: [false]});
         glueEnabled = false;
     }
 
     const rapidMotionSpeed = getProperty("rapidMotionSpeed");
     if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
-        writeSpeed(rapidMotionSpeed);
+        // writeSpeed(rapidMotionSpeed);
+        programDraft.push({function: "writeSpeed", arguments: [rapidMotionSpeed]});
         lastSpeed = rapidMotionSpeed;
     }
 
@@ -413,7 +470,8 @@ function onRapid(__x, __y, __z) {
     const p1 = {x: parseFloat(xyzFormat.format(__x)), 
                 y: parseFloat(xyzFormat.format(__y)), 
                 z: parseFloat(xyzFormat.format(__z)) + zOffset};
-    writeMoveL(p1);
+    // writeMoveL(p1);
+    programDraft.push({function: "writeMoveL", arguments: [p1]});
 }
 
 function onLinear(__x, __y, __z, __feed) {
@@ -424,13 +482,15 @@ function onLinear(__x, __y, __z, __feed) {
     }
 
     if (glueEnabled == false) {
-        writeGlue(true);
+        // writeGlue(true);
+        programDraft.push({function: "writeGlue", arguments: [true]});
         glueEnabled = true;
     }
 
     const feed = parseFloat(feedFormat.format(__feed));
     if (Math.abs(lastSpeed - feed) > 0.01) {    
-        writeSpeed(feed);
+        // writeSpeed(feed);
+        programDraft.push({function: "writeSpeed", arguments: [feed]});
         lastSpeed = feed;
     }
 
@@ -438,7 +498,8 @@ function onLinear(__x, __y, __z, __feed) {
     const p1 = {x: parseFloat(xyzFormat.format(__x)), 
                 y: parseFloat(xyzFormat.format(__y)), 
                 z: parseFloat(xyzFormat.format(__z)) + zOffset};
-    writeMoveL(p1);
+    // writeMoveL(p1);
+    programDraft.push({function: "writeMoveL", arguments: [p1]});
     lastPosition = { x: p1.x, y: p1.y, z: p1.z };
 }
 
@@ -492,17 +553,20 @@ function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z, __feed) {
     // TODO: Handle full circle case.
 
     if (glueEnabled == false) {
-        writeGlue(true);
+        // writeGlue(true);
+        programDraft.push({function: "writeGlue", arguments: [true]});
         glueEnabled = true;
     }
 
     const feed = parseFloat(feedFormat.format(__feed));
     if (Math.abs(lastSpeed - feed) > 0.01) {    
-        writeSpeed(feed);
+        // writeSpeed(feed);
+        programDraft.push({function: "writeSpeed", arguments: [feed]});
         lastSpeed = feed;
     }
 
-    writeMoveC(p1, p2);
+    // writeMoveC(p1, p2);
+    programDraft.push({function: "writeMoveC", arguments: [p1, p2]});
     lastPosition = { x: p2.x, y: p2.y, z: p2.z };
 }
 
@@ -511,7 +575,8 @@ function onSection() {
     if (currentSection.hasParameter("operation-comment")) {
         const comment = currentSection.getParameter("operation-comment");
         if (comment) {
-            writeComment("; Start: " + comment);
+            // writeComment("; Start: " + comment);
+            programDraft.push({function: "writeComment", arguments: ["; Start: " + comment]});
         }  
     }     
 }
@@ -521,7 +586,8 @@ function onSectionEnd() {
     if (currentSection.hasParameter("operation-comment")) {
         const comment = currentSection.getParameter("operation-comment");
         if (comment) {
-            writeComment("; End: " + comment);
+            // writeComment("; End: " + comment);
+            programDraft.push({function: "writeComment", arguments: ["; End: " + comment]});
         }  
     }     
 }
