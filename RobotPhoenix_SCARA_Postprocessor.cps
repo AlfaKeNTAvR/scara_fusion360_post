@@ -274,6 +274,7 @@ function onClose() {
 
     for (var i = 0; i < programDraft.length; i++) {
         let blendRadius = 0.0;
+        const blendRadiusSafetyFactor = 0.9; 
 
         switch (programDraft[i].function) {
             case "writeComment":
@@ -308,16 +309,24 @@ function onClose() {
 
             case "writeMoveL":
                 if (programDraft[i + 1].function == "writeMoveC"){
-                    const length = programDraft[i].arguments[1];
-                    const circleRadius = programDraft[i+1].arguments[2];
-                                       
-                    if (length > circleRadius) {
-                        blendRadius = 0.9 * circleRadius;
-                    }
+                    const lineLength = programDraft[i].arguments[1];
+                    const arcRadius = programDraft[i+1].arguments[2];
+                    const halfChordLength = programDraft[i+1].arguments[3] / 2;
+                                    
+                    // Blending is limited by the spatial room available to
+                    // place a circular transition.
+                    const shortestLength = Math.min(lineLength, 
+                                                    halfChordLength, 
+                                                    arcRadius);
+                    blendRadius = xyzFormat.format(blendRadiusSafetyFactor * shortestLength);
 
-                    else {
-                        blendRadius = 0.5 * length;
-                    }
+                    // writeln("<!-- ");
+                    // writeln("Arc radius: " + arcRadius);
+                    // writeln("Half chord length: " + halfChordLength);
+                    // writeln("Line length: " + lineLength);
+                    // writeln("Shortest length: " + shortestLength);
+                    // writeln("Blend radius: " + blendRadius);
+                    // writeln("-->");
                 }
 
                 writeMoveL(programDraft[i].arguments[0], 
@@ -327,16 +336,16 @@ function onClose() {
 
             case "writeMoveC":
                 if (programDraft[i+1].function == "writeMoveL") {
-                    const length = programDraft[i+1].arguments[1];
-                    const circleRadius = programDraft[i].arguments[2];
+                    const lineLength = programDraft[i+1].arguments[1];
+                    const arcRadius = programDraft[i].arguments[2];
+                    const halfChordLength = programDraft[i].arguments[3] / 2;
 
-                    if (length > circleRadius) {
-                        blendRadius = 0.9 * circleRadius;
-                    }
-
-                    else {
-                        blendRadius = 0.5 * length;
-                    }
+                    // Blending is limited by the spatial room available to
+                    // place a circular transition.
+                    const shortestLength = Math.min(lineLength, 
+                                                    halfChordLength, 
+                                                    arcRadius);
+                    blendRadius = xyzFormat.format(blendRadiusSafetyFactor * shortestLength); 
                 }
                 
                 writeMoveC(programDraft[i].arguments[0], 
@@ -601,8 +610,9 @@ function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z, __feed) {
     }
 
     // writeMoveC(p1, p2);
+    const chordLength = getCircularChordLength();
     programDraft.push({function: "writeMoveC", 
-                       arguments: [p1, p2, radius]});
+                       arguments: [p1, p2, radius, chordLength]});
     lastPosition = { x: p2.x, y: p2.y, z: p2.z };
 }
 
