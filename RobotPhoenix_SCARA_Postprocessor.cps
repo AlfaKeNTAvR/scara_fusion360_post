@@ -9,18 +9,17 @@ capabilities = CAPABILITY_MILLING | CAPABILITY_JET;
 
 allowedCircularPlanes = undefined; // Allow any circular motion.
 
-var cmdID = 0;
-var epsilon = 20.0;
-var BlendRadius = 0.0;
+const epsilon = 20.0;
+const maxSpeed = 0.5;
 
-var glueEnabled = false;
-var maxSpeed = 0.5;
+let cmdID = 0;
+let glueEnabled = false;
 
-var lastPosition = { x: 0, y: 0, z: 0 };
-var lastSpeed = 0.1; // Initialize with homing speed.
+let lastPosition = { x: 0, y: 0, z: 0 };
+let lastSpeed = 0.1; // Initialize with homing speed.
 
-var xyzFormat = createFormat({decimals: 2, trim: true});
-var feedFormat = createFormat({decimals: 2, trim: true});
+let xyzFormat = createFormat({decimals: 2, trim: true});
+let feedFormat = createFormat({decimals: 2, trim: true});
 
 // User-defined properties:
 properties = {
@@ -354,50 +353,241 @@ function onClose() {
 }
 
 function onParameter(name, value) {
-    var zOffset = getProperty("zTableOffset");
-    var rapidMotionSpeed = getProperty("rapidMotionSpeed");
-
     switch (name) {
         case "action":
-            var sText1 = String(value).toUpperCase();
-            var sText2 = new Array();
+            let sText1 = String(value).toUpperCase();
+            let sText2 = new Array();
             sText2 = sText1.split(" ");
 
         switch (sText2[0]) {
             case "VACUUM":
             if (sText2[1] == "ON") {
-                    writeln(
-`                   <Cmd ItemText="enable_vacuum:=true">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>enable_vacuum:=true</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>enable_vacuum:=true </PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-                );
+                writeVacuum(true);
+            } 
 
-          } else if (sText2[1] == "OFF") {
-                writeln(
-`                   <Cmd ItemText="enable_vacuum:=false">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>enable_vacuum:=false</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>enable_vacuum:=false </PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-                );
+            else if (sText2[1] == "OFF") {
+                writeVacuum(false);
             }
             
             break;
 
         case "PAUSE":
-            writeln(
+            writePause();
+            break;
+
+        case "DELAY":
+            const delayTime = parseFloat(sText2[1]);
+            writeDelay(delayTime);
+            break;
+
+        case "MOVE":
+            const rapidMotionSpeed = getProperty("rapidMotionSpeed");
+            if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
+                writeSpeed(rapidMotionSpeed);
+                lastSpeed = rapidMotionSpeed;
+            }
+
+            const zOffset = getProperty("zTableOffset");
+            const p1 = {x: xyzFormat.format(parseFloat(sText2[1])), 
+                        y: xyzFormat.format(parseFloat(sText2[2])), 
+                        z: xyzFormat.format(parseFloat(sText2[3])) + zOffset};
+            writeMoveL(p1);
+            break;
+        }
+    }
+}
+
+function onRapid(__x, __y, __z) {
+    if (glueEnabled == true) {
+        writeGlue(false);
+        glueEnabled = false;
+    }
+
+    const rapidMotionSpeed = getProperty("rapidMotionSpeed");
+    if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
+        writeSpeed(rapidMotionSpeed);
+        lastSpeed = rapidMotionSpeed;
+    }
+
+    const zOffset = getProperty("zTableOffset");
+    const p1 = {x: parseFloat(xyzFormat.format(__x)), 
+                y: parseFloat(xyzFormat.format(__y)), 
+                z: parseFloat(xyzFormat.format(__z)) + zOffset};
+    writeMoveL(p1);
+}
+
+function onLinear(__x, __y, __z, __feed) {
+    if (Math.abs(__x - lastPosition.x) < epsilon 
+        && Math.abs(__xy - lastPosition.y) < epsilon 
+        && Math.abs(__xz - lastPosition.z) < epsilon) {
+      return;
+    }
+
+    if (glueEnabled == false) {
+        writeGlue(true);
+        glueEnabled = true;
+    }
+
+    const feed = parseFloat(feedFormat.format(__feed));
+    if (Math.abs(lastSpeed - feed) > 0.01) {    
+        writeSpeed(feed);
+        lastSpeed = feed;
+    }
+
+    const zOffset = getProperty("zTableOffset");
+    const p1 = {x: parseFloat(xyzFormat.format(__x)), 
+                y: parseFloat(xyzFormat.format(__y)), 
+                z: parseFloat(xyzFormat.format(__z)) + zOffset};
+    writeMoveL(p1);
+    lastPosition = { x: p1.x, y: p1.y, z: p1.z };
+}
+
+function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z, __feed) {
+    const zOffset = getProperty("zTableOffset");
+    const start = getCurrentPosition();
+
+    const p0 = { x: parseFloat(xyzFormat.format(start.x)), 
+                 y: parseFloat(xyzFormat.format(start.y)), 
+                 z: parseFloat(xyzFormat.format(start.z)) + zOffset};
+
+    const center = {x: parseFloat(xyzFormat.format(___cx)), 
+                    y: parseFloat(xyzFormat.format(__cy)), 
+                    z: parseFloat(xyzFormat.format(__cz)) + zOffset};
+    const radius = Math.sqrt((p0.x - center.x) ** 2 + (p0.y - center.y) ** 2);
+
+    let p1 = { x: 0, y: 0, z: 0 };
+    const p2 = { x: parseFloat(xyzFormat.format(__x)), 
+                y: parseFloat(xyzFormat.format(__y)), 
+                z: parseFloat(xyzFormat.format(__z)) + zOffset };
+
+    if (!isFullCircle()) {
+        // Calculate the mid-point of the circular arc:
+        // 1. Convert start and end points to vectors relative to the arc
+        //    center.
+        const v0 = { x: p0.x - center.x, y: p0.y - center.y };
+        const v2 = { x: p2.x - center.x, y: p2.y - center.y };
+
+        // 2. Compute angles (angle0 and angle2) from the center to each point
+        //    using atan2.
+        const angle0 = Math.atan2(v0.y, v0.x);
+        const angle2 = Math.atan2(v2.y, v2.x);
+
+        // 3. Determine the sweep angle (difference between angle2 and angle0),
+        //    adjusted for direction.
+        let sweep = angle2 - angle0;
+        if (__clockwise && sweep > 0) sweep -= 2 * Math.PI;
+        if (!__clockwise && sweep < 0) sweep += 2 * Math.PI;
+
+        // 4. Compute the mid-angle as halfway between angle0 and angle2.
+        const midAngle = angle0 + sweep / 2;
+
+        // 5. Use polar-to-Cartesian conversion (cos/sin) with the radius and
+        //    mid-angle to get the XY midpoint. Set Z as the average of start
+        //    and end Z values.
+        p1 = { x: xyzFormat.format(center.x + radius * Math.cos(midAngle)), 
+               y: xyzFormat.format(center.y + radius * Math.sin(midAngle)), 
+               z: xyzFormat.format((p0.z + p2.z) / 2 )};
+    }
+
+    // TODO: Handle full circle case.
+
+    if (glueEnabled == false) {
+        writeGlue(true);
+        glueEnabled = true;
+    }
+
+    const feed = parseFloat(feedFormat.format(__feed));
+    if (Math.abs(lastSpeed - feed) > 0.01) {    
+        writeSpeed(feed);
+        lastSpeed = feed;
+    }
+
+    writeMoveC(p1, p2);
+    lastPosition = { x: p2.x, y: p2.y, z: p2.z };
+}
+
+function onSection() {
+    const currentSection = getSection(getCurrentSectionId());
+    if (currentSection.hasParameter("operation-comment")) {
+        const comment = currentSection.getParameter("operation-comment");
+        if (comment) {
+            writeComment("; Start: " + comment);
+        }  
+    }     
+}
+
+function onSectionEnd() {
+    const currentSection = getSection(getCurrentSectionId());
+    if (currentSection.hasParameter("operation-comment")) {
+        const comment = currentSection.getParameter("operation-comment");
+        if (comment) {
+            writeComment("; End: " + comment);
+        }  
+    }     
+}
+
+// Helper functions:
+function writeComment(comment) {
+    writeln(
+`                    <Cmd ItemText="` + (comment) +`">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Label</CmdName>
+                            <ShowName>` + (comment) +`</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                        </Cmdinfo>
+                    </Cmd>`
+    );
+}
+
+function writeGlue(enable){
+    writeln(
+`                   <Cmd ItemText="enable_glue:=` + (enable ? "true" : "false") + `">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>enable_glue:=` + (enable ? "true" : "false") + `</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>enable_glue:=` + (enable ? "true" : "false") + `</PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+    );
+}
+
+function writeSpeed(speed) {
+    writeln(
+`                   <Cmd ItemText="robot_speed:=` + (speed) + `">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>robot_speed:=` + (speed) + `</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>robot_speed:=` + (speed) + `</PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+    );
+}
+
+function writeVacuum(enable) {
+    writeln(
+`                   <Cmd ItemText="enable_vacuum:=` + (enable ? "true" : "false") + `">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>enable_vacuum:=` + (enable ? "true" : "false") + `</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>enable_vacuum:=` + (enable ? "true" : "false") + `</PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>`
+    );
+}
+
+function writePause() {
+    writeln(
 `                   <Cmd ItemText="Pause">
                         <Cmdinfo>
                             <CmdSetType>ECST_Logic</CmdSetType>
@@ -408,12 +598,11 @@ function onParameter(name, value) {
                             <Param0-IDPauseMode>0</Param0-IDPauseMode>
                         </Cmdinfo>
                     </Cmd>`
-            );
+    );
+}
 
-            break;
-
-        case "DELAY":
-            writeln(
+function writeDelay(delay) {
+    writeln(
 `                   <Cmd ItemText="Wait">
                         <Cmdinfo>
                             <CmdSetType>ECST_Logic</CmdSetType>
@@ -422,36 +611,15 @@ function onParameter(name, value) {
                             <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <Param0-IDModeSet>0</Param0-IDModeSet>
-                            <Param1-IDTimeMode>` + (parseFloat(sText2[1])) + `</Param1-IDTimeMode>
+                            <Param1-IDTimeMode>` + (delay) + `</Param1-IDTimeMode>
                             <Param2-IDExpressionMode>true</Param2-IDExpressionMode>
                         </Cmdinfo>
                     </Cmd>`
-            );
+    );
+}
 
-            break;
-
-        case "MOVE":
-            x = parseFloat(sText2[1]);
-            y = parseFloat(sText2[2]);
-            z = parseFloat(sText2[3]) + zOffset;
-
-            if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
-                writeln(
-    `               <Cmd ItemText="robot_speed:=` + rapidMotionSpeed + `">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>robot_speed:=` + rapidMotionSpeed + `</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>robot_speed:=` + rapidMotionSpeed + `</PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-                );
-                lastSpeed = rapidMotionSpeed;
-            }
-
-            writeln(
+function writeMoveL(p1, blendRadius = 0, differPose = 2) {
+    writeln(
 `                    <Cmd ItemText="MoveL">
                         <Cmdinfo>
                             <CmdSetType>ECST_Move</CmdSetType>
@@ -484,7 +652,7 @@ function onParameter(name, value) {
                                     <Param7-IDRotAcc>1.0</Param7-IDRotAcc>
                                     <Param8-IDRotJerk>1.0</Param8-IDRotJerk>
                                     <Param10-IDBlendSet>0</Param10-IDBlendSet>
-                                    <Param11-IDRadius>0</Param11-IDRadius>
+                                    <Param11-IDRadius>` + (blendRadius) + `</Param11-IDRadius>
                                     <Param12-IDTimeScale>0</Param12-IDTimeScale>
                                     <Param15-IDModeset>0</Param15-IDModeset>
                                     <Param16-IDUseVel>1.05</Param16-IDUseVel>
@@ -493,9 +661,9 @@ function onParameter(name, value) {
                                     <Param101-IDPointset>1</Param101-IDPointset>
                                     <Param102-IDPointId>0</Param102-IDPointId>
                                     <Param103-IDPoint>-1</Param103-IDPoint>
-                                    <Param104-IDX>` + (x) + `</Param104-IDX>
-                                    <Param105-IDY>` + (y) + `</Param105-IDY>
-                                    <Param106-IDZ>` + (z) + `</Param106-IDZ>
+                                    <Param104-IDX>` + (p1.x) + `</Param104-IDX>
+                                    <Param105-IDY>` + (p1.y) + `</Param105-IDY>
+                                    <Param106-IDZ>` + (p1.z) + `</Param106-IDZ>
                                     <Param109-IDRZ>0</Param109-IDRZ>
                                     <Param110-IDE1>0</Param110-IDE1>
                                     <Param111-IDE2>0</Param111-IDE2>
@@ -503,306 +671,16 @@ function onParameter(name, value) {
                                     <Param113-IDE4>0</Param113-IDE4>
                                     <Param114-IDE5>0</Param114-IDE5>
                                     <Param115-IDE6>0</Param115-IDE6>
-                                    <Param128-IDDifferPose>2</Param128-IDDifferPose>
-                                </Cmdinfo>
-                            </Cmd>
-                            <Cmd ItemText="MoveL End"/>
-                        </ChildCmd>
-                    </Cmd>`
-            );
-
-            break;
-        }
-    }
-}
-
-function onRapid(__x, __y, __z) {
-    var zOffset = getProperty("zTableOffset");
-    var rapidMotionSpeed = getProperty("rapidMotionSpeed");
-    var x = parseFloat(xyzFormat.format(__x));
-    var y = parseFloat(xyzFormat.format(__y));
-    var z = parseFloat(xyzFormat.format(__z)) + zOffset;
-
-    if (glueEnabled == true) {
-        writeln(
-`                   <Cmd ItemText="enable_glue:=false">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>enable_glue:=false</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>enable_glue:=false</PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-        );
-        glueEnabled = false;
-    }
-
-    if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
-        writeln(
-`                   <Cmd ItemText="robot_speed:=` + rapidMotionSpeed + `">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>robot_speed:=` + rapidMotionSpeed + `</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>robot_speed:=` + rapidMotionSpeed + `</PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-        );
-        lastSpeed = rapidMotionSpeed;
-    }
-
-    writeln(
-`                   <Cmd ItemText="MoveL">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Move</CmdSetType>
-                            <CmdName>MoveL</CmdName>
-                            <ShowName>MoveL</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <Param1-IDVelocity>1.0</Param1-IDVelocity>
-                            <Param2-IDAcc>1.0</Param2-IDAcc>
-                            <Param3-IDJerk>1.0</Param3-IDJerk>
-                            <Param4-IDRotVelocity>1.0</Param4-IDRotVelocity>
-                            <Param5-IDRotAcc>1.0</Param5-IDRotAcc>
-                            <Param6-IDRotJerk>1.0</Param6-IDRotJerk>
-                        </Cmdinfo>
-                        <ChildCmd>
-                            <Cmd ItemText="PathPoint">
-                                <Cmdinfo>
-                                    <CmdSetType>ECST_Move</CmdSetType>
-                                    <CmdName>PathPoint</CmdName>
-                                    <ShowName>PathPoint</ShowName>
-                                    <CmdId>` + (cmdID++) + `</CmdId>
-                                    <SameTypeID>-1</SameTypeID>
-                                    <Param0-IDTCP>0</Param0-IDTCP>
-                                    <Param1-IDBase>0</Param1-IDBase>
-                                    <Param2-IDUseCustom>false</Param2-IDUseCustom>
-                                    <Param3-IDVelocity>1.0</Param3-IDVelocity>
-                                    <Param4-IDAcc>1.0</Param4-IDAcc>
-                                    <Param5-IDJerk>1.0</Param5-IDJerk>
-                                    <Param6-IDRotVelocity>1.0</Param6-IDRotVelocity>
-                                    <Param7-IDRotAcc>1.0</Param7-IDRotAcc>
-                                    <Param8-IDRotJerk>1.0</Param8-IDRotJerk>
-                                    <Param10-IDBlendSet>0</Param10-IDBlendSet>
-                                    <Param11-IDRadius>0</Param11-IDRadius>
-                                    <Param12-IDTimeScale>0</Param12-IDTimeScale>
-                                    <Param15-IDModeset>0</Param15-IDModeset>
-                                    <Param16-IDUseVel>1.05</Param16-IDUseVel>
-                                    <Param17-IDTime>1</Param17-IDTime>
-                                    <Param100-IDTabPointSet>''</Param100-IDTabPointSet>
-                                    <Param101-IDPointset>1</Param101-IDPointset>
-                                    <Param102-IDPointId>0</Param102-IDPointId>
-                                    <Param103-IDPoint>-1</Param103-IDPoint>
-                                    <Param104-IDX>` + (x) + `</Param104-IDX>
-                                    <Param105-IDY>` + (y) + `</Param105-IDY>
-                                    <Param106-IDZ>` + (z) + `</Param106-IDZ>
-                                    <Param109-IDRZ>0</Param109-IDRZ>
-                                    <Param110-IDE1>0</Param110-IDE1>
-                                    <Param111-IDE2>0</Param111-IDE2>
-                                    <Param112-IDE3>0</Param112-IDE3>
-                                    <Param113-IDE4>0</Param113-IDE4>
-                                    <Param114-IDE5>0</Param114-IDE5>
-                                    <Param115-IDE6>0</Param115-IDE6>
-                                    <Param128-IDDifferPose>2</Param128-IDDifferPose>
+                                    <Param128-IDDifferPose>` + (differPose) + `</Param128-IDDifferPose>
                                 </Cmdinfo>
                             </Cmd>
                             <Cmd ItemText="MoveL End"/>
                         </ChildCmd>
                     </Cmd>`
     );
-
 }
 
-function onLinear(__x, __y, __z, __feed) {
-    var zOffset = getProperty("zTableOffset");
-    var x = parseFloat(xyzFormat.format(__x));
-    var y = parseFloat(xyzFormat.format(__y));
-    var z = parseFloat(xyzFormat.format(__z)) + zOffset;
-    var feed = parseFloat(feedFormat.format(__feed));
-
-    if (Math.abs(x - lastPosition.x) < epsilon && Math.abs(y - lastPosition.y) < epsilon && Math.abs(z - lastPosition.z) < epsilon) {
-      return;
-    }
-
-    lastPosition = { x: x, y: y, z: z };
-
-    if (glueEnabled == false) {
-        writeln(
-`                   <Cmd ItemText="enable_glue:=true">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>enable_glue:=true</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>enable_glue:=true </PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-        );
-        glueEnabled = true;
-    }
-
-    if (Math.abs(lastSpeed - feed) > 0.01) {    
-        writeln(
-`                   <Cmd ItemText="robot_speed:=` + feed + `">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>robot_speed:=` + feed + `</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>robot_speed:=` + feed + `</PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-        );
-        lastSpeed = feed;
-    }
-
-    writeln(
-`                   <Cmd ItemText="MoveL">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Move</CmdSetType>
-                            <CmdName>MoveL</CmdName>
-                            <ShowName>MoveL</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <Param1-IDVelocity>1.0</Param1-IDVelocity>
-                            <Param2-IDAcc>1.0</Param2-IDAcc>
-                            <Param3-IDJerk>1.0</Param3-IDJerk>
-                            <Param4-IDRotVelocity>1.0</Param4-IDRotVelocity>
-                            <Param5-IDRotAcc>1.0</Param5-IDRotAcc>
-                            <Param6-IDRotJerk>1.0</Param6-IDRotJerk>
-                        </Cmdinfo>
-                        <ChildCmd>
-                            <Cmd ItemText="PathPoint">
-                                <Cmdinfo>
-                                    <CmdSetType>ECST_Move</CmdSetType>
-                                    <CmdName>PathPoint</CmdName>
-                                    <ShowName>PathPoint</ShowName>
-                                    <CmdId>` + (cmdID++) + `</CmdId>
-                                    <SameTypeID>-1</SameTypeID>
-                                    <Param0-IDTCP>0</Param0-IDTCP>
-                                    <Param1-IDBase>0</Param1-IDBase>
-                                    <Param2-IDUseCustom>false</Param2-IDUseCustom>
-                                    <Param3-IDVelocity>1.0</Param3-IDVelocity>
-                                    <Param4-IDAcc>1.0</Param4-IDAcc>
-                                    <Param5-IDJerk>1.0</Param5-IDJerk>
-                                    <Param6-IDRotVelocity>1.0</Param6-IDRotVelocity>
-                                    <Param7-IDRotAcc>1.0</Param7-IDRotAcc>
-                                    <Param8-IDRotJerk>1.0</Param8-IDRotJerk>
-                                    <Param10-IDBlendSet>0</Param10-IDBlendSet>
-                                    <Param11-IDRadius>` + (BlendRadius) + `</Param11-IDRadius>
-                                    <Param12-IDTimeScale>0</Param12-IDTimeScale>
-                                    <Param15-IDModeset>0</Param15-IDModeset>
-                                    <Param16-IDUseVel>1.05</Param16-IDUseVel>
-                                    <Param17-IDTime>1</Param17-IDTime>
-                                    <Param100-IDTabPointSet>''</Param100-IDTabPointSet>
-                                    <Param101-IDPointset>1</Param101-IDPointset>
-                                    <Param102-IDPointId>0</Param102-IDPointId>
-                                    <Param103-IDPoint>-1</Param103-IDPoint>
-                                    <Param104-IDX>` + (x) + `</Param104-IDX>
-                                    <Param105-IDY>` + (y) + `</Param105-IDY>
-                                    <Param106-IDZ>` + (z) + `</Param106-IDZ>
-                                    <Param109-IDRZ>0</Param109-IDRZ>
-                                    <Param110-IDE1>0</Param110-IDE1>
-                                    <Param111-IDE2>0</Param111-IDE2>
-                                    <Param112-IDE3>0</Param112-IDE3>
-                                    <Param113-IDE4>0</Param113-IDE4>
-                                    <Param114-IDE5>0</Param114-IDE5>
-                                    <Param115-IDE6>0</Param115-IDE6>
-                                    <Param128-IDDifferPose>2</Param128-IDDifferPose>
-                                </Cmdinfo>
-                            </Cmd>
-                            <Cmd ItemText="MoveL End"/>
-                        </ChildCmd>
-                    </Cmd>`
-    );
-    
-}
-
-function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z, __feed) {
-    const zOffset = getProperty("zTableOffset");
-    const center = {x: parseFloat(xyzFormat.format(___cx)), y: parseFloat(xyzFormat.format(__cy)), z: parseFloat(xyzFormat.format(__cz)) + zOffset};
-    const p2 = { x: parseFloat(xyzFormat.format(__x)), y: parseFloat(xyzFormat.format(__y)), z: parseFloat(xyzFormat.format(__z)) + zOffset };
-    const feed = parseFloat(feedFormat.format(__feed));
-
-    lastMoveType = "circular";
-    lastPosition = { x: p2.x, y: p2.y, z: p2.z };
-
-
-    // writeln(getCircularRadius() + " " + isFullCircle() + " " + getCircularSweep());
-
-    const start = getCurrentPosition();
-    const p0 = { x: parseFloat(xyzFormat.format(start.x)), y: parseFloat(xyzFormat.format(start.y)), z: parseFloat(xyzFormat.format(start.z)) + zOffset};
-    let p1 = { x: 0, y: 0, z: 0 };
-
-    const radius = Math.sqrt((p0.x - center.x) ** 2 + (p0.y - center.y) ** 2);
-
-    if (!isFullCircle()) {
-        // Calculate the mid-point of the circular arc:
-        // 1. Convert start and end points to vectors relative to the arc
-        //    center.
-        const v0 = { x: p0.x - center.x, y: p0.y - center.y };
-        const v2 = { x: p2.x - center.x, y: p2.y - center.y };
-
-        // 2. Compute angles (angle0 and angle2) from the center to each point
-        //    using atan2.
-        const angle0 = Math.atan2(v0.y, v0.x);
-        const angle2 = Math.atan2(v2.y, v2.x);
-
-        // 3. Determine the sweep angle (difference between angle2 and angle0),
-        //    adjusted for direction.
-        let sweep = angle2 - angle0;
-        if (__clockwise && sweep > 0) sweep -= 2 * Math.PI;
-        if (!__clockwise && sweep < 0) sweep += 2 * Math.PI;
-
-        // 4. Compute the mid-angle as halfway between angle0 and angle2.
-        const midAngle = angle0 + sweep / 2;
-
-        // 5. Use polar-to-Cartesian conversion (cos/sin) with the radius and
-        //    mid-angle to get the XY midpoint. Set Z as the average of start
-        //    and end Z values.
-        p1 = { x: xyzFormat.format(center.x + radius * Math.cos(midAngle)), y: xyzFormat.format(center.y + radius * Math.sin(midAngle)), z: xyzFormat.format((p0.z + p2.z) / 2 )};
-    }
-
-    // TODO: Handle full circle case.
-
-    if (glueEnabled == false) {
-        writeln(
-`                   <Cmd ItemText="enable_glue:=true">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>enable_glue:=true</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>enable_glue:=true </PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-        );
-        glueEnabled = true;
-    }
-
-    if (Math.abs(lastSpeed - feed) > 0.01) {    
-        writeln(
-`                   <Cmd ItemText="robot_speed:=` + feed + `">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Expression</CmdName>
-                            <ShowName>robot_speed:=` + feed + `</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                            <PmExp0-IDExpression>robot_speed:=` + feed + `</PmExp0-IDExpression>
-                        </Cmdinfo>
-                    </Cmd>`
-        );
-        lastSpeed = feed;
-    }
-
+function writeMoveC(p1, p2, blendRadius = 0, differPose = 2) {
     writeln(
  `                  <Cmd ItemText="MoveC">
                         <Cmdinfo>
@@ -820,9 +698,9 @@ function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z, __feed) {
                             <Param7-IDRotAcc>1</Param7-IDRotAcc>
                             <Param8-IDRotJerk>1</Param8-IDRotJerk>
                             <Param9-IDBlendSet>0</Param9-IDBlendSet>
-                            <Param10-IDRadius>0</Param10-IDRadius>
+                            <Param10-IDRadius>` + (blendRadius) + `</Param10-IDRadius>
                             <Param11-IDTimeScale>0</Param11-IDTimeScale>
-                            <Param13-IDDifferPose>2</Param13-IDDifferPose>
+                            <Param13-IDDifferPose>` + (differPose) + `</Param13-IDDifferPose>
                             <Param14-IDModeset>0</Param14-IDModeset>
                             <Param15-IDUseVel>0.25</Param15-IDUseVel>
                             <Param16-IDTime>1</Param16-IDTime>
@@ -856,48 +734,5 @@ function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z, __feed) {
                             <Param64-IDE26>0</Param64-IDE26>
                         </Cmdinfo>
                     </Cmd>`
-    ); 
-    cmdID += 1;
-}
-
-function onSection() {
-    var currentSection = getSection(getCurrentSectionId());
-    if (currentSection.hasParameter("operation-comment")) {
-        var comment = currentSection.getParameter("operation-comment");
-        if (comment) {
-            writeln(
-`                    <Cmd ItemText="`+ `; Start: ` + comment +`">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Label</CmdName>
-                            <ShowName>`+ `; Start: ` + comment +`</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                        </Cmdinfo>
-                    </Cmd>`
-            );
-            
-        }  
-    }     
-}
-
-function onSectionEnd() {
-    var currentSection = getSection(getCurrentSectionId());
-    if (currentSection.hasParameter("operation-comment")) {
-        var comment = currentSection.getParameter("operation-comment");
-        if (comment) {
-            writeln(
-`                    <Cmd ItemText="`+ `; End: ` + comment +`">
-                        <Cmdinfo>
-                            <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Label</CmdName>
-                            <ShowName>`+ `; End: ` + comment +`</ShowName>
-                            <CmdId>` + (cmdID++) + `</CmdId>
-                            <SameTypeID>-1</SameTypeID>
-                        </Cmdinfo>
-                    </Cmd>`
-            );
-            
-        }  
-    }     
+    );
 }
