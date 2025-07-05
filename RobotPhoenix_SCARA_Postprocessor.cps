@@ -273,7 +273,8 @@ function onOpen() {
 function onClose() {
 
     for (var i = 0; i < programDraft.length; i++) {
-        // writeln(programDraft[i].function + "(" + programDraft[i].arguments[0] + ")");
+        let blendRadius = 0.0;
+
         switch (programDraft[i].function) {
             case "writeComment":
                 writeComment(programDraft[i].arguments[0]);
@@ -306,13 +307,41 @@ function onClose() {
                 break;
 
             case "writeMoveL":
-                writeMoveL(programDraft[i].arguments[0]);
+                if (programDraft[i + 1].function == "writeMoveC"){
+                    const length = programDraft[i].arguments[1];
+                    const circleRadius = programDraft[i+1].arguments[2];
+                                       
+                    if (length > circleRadius) {
+                        blendRadius = 0.9 * circleRadius;
+                    }
+
+                    else {
+                        blendRadius = 0.5 * length;
+                    }
+                }
+
+                writeMoveL(programDraft[i].arguments[0], 
+                           blendRadius);
                 
                 break;
 
             case "writeMoveC":
+                if (programDraft[i+1].function == "writeMoveL") {
+                    const length = programDraft[i+1].arguments[1];
+                    const circleRadius = programDraft[i].arguments[2];
+
+                    if (length > circleRadius) {
+                        blendRadius = 0.9 * circleRadius;
+                    }
+
+                    else {
+                        blendRadius = 0.5 * length;
+                    }
+                }
+                
                 writeMoveC(programDraft[i].arguments[0], 
-                           programDraft[i].arguments[1]);
+                           programDraft[i].arguments[1], 
+                           blendRadius);
     
                 break;
         }
@@ -447,6 +476,7 @@ function onParameter(name, value) {
                         z: xyzFormat.format(parseFloat(sText2[3])) + zOffset};
             // writeMoveL(p1);
             programDraft.push({function: "writeMoveL", arguments: [p1]});
+            lastPosition = { x: p1.x, y: p1.y, z: p1.z };
             break;
         }
     }
@@ -472,12 +502,13 @@ function onRapid(__x, __y, __z) {
                 z: parseFloat(xyzFormat.format(__z)) + zOffset};
     // writeMoveL(p1);
     programDraft.push({function: "writeMoveL", arguments: [p1]});
+    lastPosition = { x: p1.x, y: p1.y, z: p1.z };
 }
 
 function onLinear(__x, __y, __z, __feed) {
     if (Math.abs(__x - lastPosition.x) < epsilon 
-        && Math.abs(__xy - lastPosition.y) < epsilon 
-        && Math.abs(__xz - lastPosition.z) < epsilon) {
+        && Math.abs(__y - lastPosition.y) < epsilon 
+        && Math.abs(__z - lastPosition.z) < epsilon) {
       return;
     }
 
@@ -495,11 +526,15 @@ function onLinear(__x, __y, __z, __feed) {
     }
 
     const zOffset = getProperty("zTableOffset");
+    const p0 = {x: parseFloat(xyzFormat.format(lastPosition.x)), 
+                y: parseFloat(xyzFormat.format(lastPosition.y)), 
+                z: parseFloat(xyzFormat.format(lastPosition.z))}; 
     const p1 = {x: parseFloat(xyzFormat.format(__x)), 
                 y: parseFloat(xyzFormat.format(__y)), 
                 z: parseFloat(xyzFormat.format(__z)) + zOffset};
+    const length = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
     // writeMoveL(p1);
-    programDraft.push({function: "writeMoveL", arguments: [p1]});
+    programDraft.push({function: "writeMoveL", arguments: [p1, length]});
     lastPosition = { x: p1.x, y: p1.y, z: p1.z };
 }
 
@@ -566,7 +601,8 @@ function onCircular(__clockwise, ___cx, __cy, __cz, __x, __y, __z, __feed) {
     }
 
     // writeMoveC(p1, p2);
-    programDraft.push({function: "writeMoveC", arguments: [p1, p2]});
+    programDraft.push({function: "writeMoveC", 
+                       arguments: [p1, p2, radius]});
     lastPosition = { x: p2.x, y: p2.y, z: p2.z };
 }
 
@@ -684,7 +720,7 @@ function writeDelay(delay) {
     );
 }
 
-function writeMoveL(p1, blendRadius = 0, differPose = 2) {
+function writeMoveL(p1, blendRadius = 0.0, differPose = 2) {
     writeln(
 `                    <Cmd ItemText="MoveL">
                         <Cmdinfo>
@@ -746,7 +782,7 @@ function writeMoveL(p1, blendRadius = 0, differPose = 2) {
     );
 }
 
-function writeMoveC(p1, p2, blendRadius = 0, differPose = 2) {
+function writeMoveC(p1, p2, blendRadius = 0.0, differPose = 2) {
     writeln(
  `                  <Cmd ItemText="MoveC">
                         <Cmdinfo>
