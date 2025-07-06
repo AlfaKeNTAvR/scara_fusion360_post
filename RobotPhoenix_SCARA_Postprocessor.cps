@@ -9,7 +9,6 @@ capabilities = CAPABILITY_MILLING | CAPABILITY_JET;
 
 allowedCircularPlanes = undefined; // Allow any circular motion.
 
-const epsilon = 20.0;
 const maxSpeed = 0.5;
 
 let cmdID = 0;
@@ -43,15 +42,15 @@ properties = {
         range: [0.01, maxSpeed],
         scope: "post",
     },
-    // blendingRadius: {
-    //     title: "Blending Radius (mm)",
-    //     // description: "The robot speed fraction for fast movement without glue application.",
-    //     group: "2 - Advanced",
-    //     type: "number",
-    //     value: 10,
-    //     // range: [0, maxVelocityFraction],
-    //     scope: "post",
-    // },
+    defaultBlendingRadius: {
+        title: "Default Blending Radius (mm)",
+        // description: "The robot speed fraction for fast movement without glue application.",
+        group: "2 - Advanced",
+        type: "number",
+        value: 10,
+        // range: [0, maxVelocityFraction],
+        scope: "post",
+    },
 };
 
 function onOpen() {
@@ -309,7 +308,7 @@ function onClose() {
 
             case "writeMoveL":
                 if (programDraft[i + 1].function == "writeMoveC"){
-                    const lineLength = programDraft[i].arguments[1];
+                    const lineLength = programDraft[i].arguments[2];
                     const arcRadius = programDraft[i+1].arguments[2];
                     const halfChordLength = programDraft[i+1].arguments[3] / 2;
                                     
@@ -329,6 +328,21 @@ function onClose() {
                     // writeln("-->");
                 }
 
+                else if (programDraft[i + 1].function == "writeMoveL" 
+                         && programDraft[i + 1].arguments[1] == "feed") {
+                    const lineLength = programDraft[i].arguments[2];
+                    const nextLineLength = programDraft[i+1].arguments[2];
+                    const defaultBlendingRadius = getProperty("defaultBlendingRadius");
+
+                    blendRadius = xyzFormat.format(Math.min(lineLength / 2, 
+                                                            nextLineLength / 2,
+                                                            defaultBlendingRadius));
+                }
+
+                if (blendRadius < 1){
+                    blendRadius = 0;
+                }
+                    
                 writeMoveL(programDraft[i].arguments[0], 
                            blendRadius);
                 
@@ -336,7 +350,7 @@ function onClose() {
 
             case "writeMoveC":
                 if (programDraft[i+1].function == "writeMoveL") {
-                    const lineLength = programDraft[i+1].arguments[1];
+                    const lineLength = programDraft[i+1].arguments[2];
                     const arcRadius = programDraft[i].arguments[2];
                     const halfChordLength = programDraft[i].arguments[3] / 2;
 
@@ -484,7 +498,7 @@ function onParameter(name, value) {
                         y: xyzFormat.format(parseFloat(sText2[2])), 
                         z: xyzFormat.format(parseFloat(sText2[3])) + zOffset};
             // writeMoveL(p1);
-            programDraft.push({function: "writeMoveL", arguments: [p1]});
+            programDraft.push({function: "writeMoveL", arguments: [p1, "rapid"]});
             lastPosition = { x: p1.x, y: p1.y, z: p1.z };
             break;
         }
@@ -510,17 +524,11 @@ function onRapid(__x, __y, __z) {
                 y: parseFloat(xyzFormat.format(__y)), 
                 z: parseFloat(xyzFormat.format(__z)) + zOffset};
     // writeMoveL(p1);
-    programDraft.push({function: "writeMoveL", arguments: [p1]});
+    programDraft.push({function: "writeMoveL", arguments: [p1, "rapid"]});
     lastPosition = { x: p1.x, y: p1.y, z: p1.z };
 }
 
 function onLinear(__x, __y, __z, __feed) {
-    if (Math.abs(__x - lastPosition.x) < epsilon 
-        && Math.abs(__y - lastPosition.y) < epsilon 
-        && Math.abs(__z - lastPosition.z) < epsilon) {
-      return;
-    }
-
     if (glueEnabled == false) {
         // writeGlue(true);
         programDraft.push({function: "writeGlue", arguments: [true]});
@@ -543,7 +551,7 @@ function onLinear(__x, __y, __z, __feed) {
                 z: parseFloat(xyzFormat.format(__z)) + zOffset};
     const length = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
     // writeMoveL(p1);
-    programDraft.push({function: "writeMoveL", arguments: [p1, length]});
+    programDraft.push({function: "writeMoveL", arguments: [p1, "feed", length]});
     lastPosition = { x: p1.x, y: p1.y, z: p1.z };
 }
 
