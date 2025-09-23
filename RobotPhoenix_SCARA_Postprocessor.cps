@@ -461,31 +461,31 @@ function onParameter(name, value) {
             sText2 = sText1.split(" ");
 
         switch (sText2[0]) {
-            case "VACUUM":
-            if (sText2[1] == "ON") {
+            case "ВАКУУМ":
+            if (sText2[1] == "ВКЛ") {
                 // writeVacuum(true);
                 programDraft.push({function: "writeVacuum", arguments: [true]});
             } 
 
-            else if (sText2[1] == "OFF") {
+            else if (sText2[1] == "ВЫКЛ") {
                 // writeVacuum(false);
                 programDraft.push({function: "writeVacuum", arguments: [false]});
             }
             
             break;
 
-        case "PAUSE":
+        case "ЗАДЕРЖКА":
             // writePause();
             programDraft.push({function: "writePause", arguments: []});
             break;
 
-        case "DELAY":
+        case "ПАУЗА":
             const delayTime = parseFloat(sText2[1]);
             // writeDelay(delayTime);
             programDraft.push({function: "writeDelay", arguments: [delayTime]});
             break;
 
-        case "MOVE":
+        case "ТОЧКА":
             const rapidMotionSpeed = getProperty("rapidMotionSpeed");
             if (Math.abs(lastSpeed - rapidMotionSpeed) > 0.01) {    
                 // writeSpeed(rapidMotionSpeed);
