@@ -132,6 +132,28 @@ function onOpen() {
             <bExternOper>false</bExternOper>
             <Comment></Comment>
         </Var>
+        <Var>
+            <VarID>3</VarID>
+            <strVartype>bool</strVartype>
+            <VarName>glue_enabled</VarName>
+            <SVarValue>false</SVarValue>
+            <bInitMaxAndMin>false</bInitMaxAndMin>
+            <MaxValue>true</MaxValue>
+            <MinValue>false</MinValue>
+            <bExternOper>false</bExternOper>
+            <Comment></Comment>
+        </Var>
+        <Var>
+            <VarID>4</VarID>
+            <strVartype>bool</strVartype>
+            <VarName>pause_button</VarName>
+            <SVarValue>false</SVarValue>
+            <bInitMaxAndMin>false</bInitMaxAndMin>
+            <MaxValue>true</MaxValue>
+            <MinValue>false</MinValue>
+            <bExternOper>false</bExternOper>
+            <Comment></Comment>
+        </Var>
     </VarList>
     <PointList/>
     <ArrayList/>
@@ -186,6 +208,16 @@ function onOpen() {
                             <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
                             <PmExp0-IDExpression>enable_glue:=false </PmExp0-IDExpression>
+                        </Cmdinfo>
+                    </Cmd>
+                    <Cmd ItemText="glue_enabled := false">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>glue_enabled := false</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>glue_enabled := false </PmExp0-IDExpression>
                         </Cmdinfo>
                     </Cmd>
                     <Cmd ItemText="enable_vacuum:=false">
@@ -521,6 +553,114 @@ function onClose() {
             <Cmd ItemText="Thread End"/>
         </ChildCmd>
     </Cmd>
+    <Cmd ItemText="Pause Thread">
+        <Cmdinfo>
+            <CmdSetType>ECST_Segment</CmdSetType>
+            <CmdName>Thread</CmdName>
+            <ShowName>Pause Thread</ShowName>
+            <CmdId>` + (cmdID++) + `</CmdId>
+            <SameTypeID>-1</SameTypeID>
+        </Cmdinfo>
+        <ChildCmd>
+            <Cmd ItemText="Wait">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Logic</CmdSetType>
+                    <CmdName>Wait</CmdName>
+                    <ShowName>Wait</ShowName>
+                    <CmdId>` + (cmdID++) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <Param0-IDModeSet>1</Param0-IDModeSet>
+                    <Param1-IDTimeMode>0.01</Param1-IDTimeMode>
+                    <PmExp2-IDExpressionMode>Input1 == true </PmExp2-IDExpressionMode>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="Pause">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Logic</CmdSetType>
+                    <CmdName>Pause</CmdName>
+                    <ShowName>Pause</ShowName>
+                    <CmdId>` + (cmdID++) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <Param0-IDPauseMode>0</Param0-IDPauseMode>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="enable_glue := false">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Logic</CmdSetType>
+                    <CmdName>Expression</CmdName>
+                    <ShowName>enable_glue := false</ShowName>
+                    <CmdId>` + (cmdID++) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <PmExp0-IDExpression>enable_glue := false </PmExp0-IDExpression>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="pause_button := true">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Logic</CmdSetType>
+                    <CmdName>Expression</CmdName>
+                    <ShowName>pause_button := true</ShowName>
+                    <CmdId>` + (cmdID++) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <PmExp0-IDExpression>pause_button := true </PmExp0-IDExpression>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="Thread End"/>
+        </ChildCmd>
+    </Cmd>
+    <Cmd ItemText="Resume Thread">
+        <Cmdinfo>
+            <CmdSetType>ECST_Segment</CmdSetType>
+            <CmdName>Thread</CmdName>
+            <ShowName>Resume Thread</ShowName>
+            <CmdId>` + (cmdID++) + `</CmdId>
+            <SameTypeID>-1</SameTypeID>
+        </Cmdinfo>
+        <ChildCmd>
+            <Cmd ItemText="Wait">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Logic</CmdSetType>
+                    <CmdName>Wait</CmdName>
+                    <ShowName>Wait</ShowName>
+                    <CmdId>` + (cmdID++) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <Param0-IDModeSet>1</Param0-IDModeSet>
+                    <Param1-IDTimeMode>0.01</Param1-IDTimeMode>
+                    <PmExp2-IDExpressionMode>Input0 == true </PmExp2-IDExpressionMode>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="enable_glue := glue_enabled">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Logic</CmdSetType>
+                    <CmdName>Expression</CmdName>
+                    <ShowName>enable_glue := glue_enabled</ShowName>
+                    <CmdId>` + (cmdID++) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <PmExp0-IDExpression>enable_glue := glue_enabled </PmExp0-IDExpression>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="Resume">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Logic</CmdSetType>
+                    <CmdName>Pause</CmdName>
+                    <ShowName>Resume</ShowName>
+                    <CmdId>` + (cmdID++) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <Param0-IDPauseMode>1</Param0-IDPauseMode>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="pause_button := false">
+                <Cmdinfo>
+                    <CmdSetType>ECST_Logic</CmdSetType>
+                    <CmdName>Expression</CmdName>
+                    <ShowName>pause_button := false</ShowName>
+                    <CmdId>` + (cmdID++) + `</CmdId>
+                    <SameTypeID>-1</SameTypeID>
+                    <PmExp0-IDExpression>pause_button := false </PmExp0-IDExpression>
+                </Cmdinfo>
+            </Cmd>
+            <Cmd ItemText="Thread End"/>
+        </ChildCmd>
+    </Cmd>
 </Cmds>`
     );
 }
@@ -744,6 +884,16 @@ function writeGlue(enable){
                             <SameTypeID>-1</SameTypeID>
                             <PmExp0-IDExpression>enable_glue:=` + (enable ? "true" : "false") + `</PmExp0-IDExpression>
                         </Cmdinfo>
+                    </Cmd>
+                    <Cmd ItemText="glue_enabled:=` + (enable ? "true" : "false") + `">
+                        <Cmdinfo>
+                            <CmdSetType>ECST_Logic</CmdSetType>
+                            <CmdName>Expression</CmdName>
+                            <ShowName>glue_enabled:=` + (enable ? "true" : "false") + `</ShowName>
+                            <CmdId>` + (cmdID++) + `</CmdId>
+                            <SameTypeID>-1</SameTypeID>
+                            <PmExp0-IDExpression>glue_enabled:=` + (enable ? "true" : "false") + `</PmExp0-IDExpression>
+                        </Cmdinfo>
                     </Cmd>`
     );
 }
@@ -780,14 +930,16 @@ function writeVacuum(enable) {
 
 function writePause() {
     writeln(
-`                   <Cmd ItemText="Pause">
+`                   <Cmd ItemText="Wait">
                         <Cmdinfo>
                             <CmdSetType>ECST_Logic</CmdSetType>
-                            <CmdName>Pause</CmdName>
-                            <ShowName>Pause</ShowName>
+                            <CmdName>Wait</CmdName>
+                            <ShowName>Wait</ShowName>
                             <CmdId>` + (cmdID++) + `</CmdId>
                             <SameTypeID>-1</SameTypeID>
-                            <Param0-IDPauseMode>0</Param0-IDPauseMode>
+                            <Param0-IDModeSet>1</Param0-IDModeSet>
+                            <Param1-IDTimeMode>0.01</Param1-IDTimeMode>
+                            <PmExp2-IDExpressionMode>Input0 == true </PmExp2-IDExpressionMode>
                         </Cmdinfo>
                     </Cmd>`
     );
